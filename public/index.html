@@ -3,6 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <title>Contact Manager</title>
+  <style>
+    /* Global Styling */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 40px;
+      color: #333;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    /* Form Styling */
+    #contactForm {
+      max-width: 600px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    #contactForm input {
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #contactForm button {
+      grid-column: span 2;
+      padding: 12px;
+      font-size: 1em;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #contactForm button:hover {
+      background-color: #2980b9;
+    }
+
+    /* Contacts List Styling */
+    #contactList {
+      max-width: 700px;
+      margin: 30px auto;
+      list-style: none;
+      padding: 0;
+    }
+
+    #contactList li {
+      background-color: #fff;
+      margin-bottom: 15px;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #contactList li button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #contactList li button:hover {
+      background-color: #c0392b;
+    }
+
+    @media (max-width: 600px) {
+      #contactForm {
+        grid-template-columns: 1fr;
+      }
+
+      #contactList li {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #contactList li button {
+        margin-top: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
   <h1>Contact Manager</h1>
@@ -19,6 +119,9 @@
   <ul id="contactList"></ul>
 
   <script>
+    let editMode = false;
+    let currentEditId = null;
+  
     async function fetchContacts() {
       const res = await fetch('/api/contacts');
       const contacts = await res.json();
@@ -28,30 +131,55 @@
         const li = document.createElement('li');
         li.innerHTML = `
           ${contact.name} | ${contact.phone} | ${contact.email} | ${contact.address}
+          <button onclick="editContact('${contact._id}', '${contact.name}', '${contact.phone}', '${contact.email}', '${contact.address}')">Edit</button>
           <button onclick="deleteContact('${contact._id}')">Delete</button>
         `;
         list.appendChild(li);
       });
     }
-
+  
     async function deleteContact(id) {
       await fetch('/api/contacts/' + id, { method: 'DELETE' });
       fetchContacts();
     }
-
+  
+    function editContact(id, name, phone, email, address) {
+      const form = document.getElementById('contactForm');
+      form.name.value = name;
+      form.phone.value = phone;
+      form.email.value = email;
+      form.address.value = address;
+      editMode = true;
+      currentEditId = id;
+      form.querySelector('button').textContent = 'Update Contact';
+    }
+  
     document.getElementById('contactForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const contact = Object.fromEntries(formData.entries());
-      await fetch('/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contact)
-      });
+  
+      if (editMode) {
+        await fetch('/api/contacts/' + currentEditId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contact)
+        });
+        editMode = false;
+        currentEditId = null;
+        e.target.querySelector('button').textContent = 'Add Contact';
+      } else {
+        await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contact)
+        });
+      }
+  
       e.target.reset();
       fetchContacts();
     });
-
+  
     fetchContacts();
   </script>
 </body>
